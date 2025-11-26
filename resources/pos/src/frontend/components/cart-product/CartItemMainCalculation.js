@@ -9,6 +9,7 @@ import {
     placeholderText,
 } from "../../../shared/sharedMethod";
 import { discountType } from "../../../constants";
+import { NonceProvider } from "react-select";
 
 const CartItemMainCalculation = (props) => {
     const {
@@ -23,9 +24,9 @@ const CartItemMainCalculation = (props) => {
     } = props;
 
     return (
-        <div className="calculation mt-5">
+        <div className="calculation mt-5" >
             <Row className="total-price">
-                <div className="col-6 mb-2">
+                <div className="col-6 mb-2" style={{display:"none"}}>
                     <Form.Group className="calculation__filed-grp mb-2">
                         <InputGroup>
                             <FormControl

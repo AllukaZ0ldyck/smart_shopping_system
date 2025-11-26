@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Button } from "react-bootstrap-v5";
 import { useDispatch } from "react-redux";
 import { addToast } from "../../../store/action/toastAction";
@@ -13,9 +13,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import moment from "moment";
 import { addHoldList } from "../../../store/action/pos/HoldListAction";
+    // Add imports at top of file
+import ProcessingModal from "../../../components/ProcessingModal"; // adjust path
 
 const PaymentButton = (props) => {
     const {
+        customer_id,
+        warehouse_id,
         updateProducts,
         setCashPayment,
         cartItemValue,
@@ -229,6 +233,138 @@ const PaymentButton = (props) => {
         }));
     };
 
+    const [processing, setProcessing] = useState(false);
+        const [processingMessage, setProcessingMessage] = useState('');
+        const pollingRef = useRef(null);
+
+        const startPolling = (reference, onComplete) => {
+            // clear any previous poll
+            if (pollingRef.current) clearInterval(pollingRef.current);
+
+            pollingRef.current = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/hitpay/status/${reference}`, {
+                        method: "GET",
+                        headers: { "Accept": "application/json" }
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        if (data.status === 'completed') {
+                            clearInterval(pollingRef.current);
+                            pollingRef.current = null;
+                            setProcessing(false);
+                            dispatch(addToast({
+                                text: getFormattedMessage("pos.payment.success"),
+                                type: toastType.SUCCESS,
+                            }));
+                            // perform order update logic here, or callback
+                            if (typeof onComplete === 'function') onComplete(data.payment);
+                        } else if (data.status === 'failed') {
+                            clearInterval(pollingRef.current);
+                            pollingRef.current = null;
+                            setProcessing(false);
+                            dispatch(addToast({
+                                text: getFormattedMessage("pos.payment.failed"),
+                                type: toastType.ERROR,
+                            }));
+                        } else {
+                            // still pending - optional update
+                            setProcessingMessage('Waiting for payment confirmation...');
+                        }
+                    } else {
+                        // optional: log error
+                        console.error('HitPay status error', data);
+                    }
+                } catch (e) {
+                    console.error('Poll error', e);
+                }
+            }, 5000); // poll every 5s
+        };
+
+        const payWithHitPay = async () => {
+            try {
+                // 1) create payment in server -> we receive redirect_url and reference
+                setProcessing(true);
+                setProcessingMessage('Creating payment...');
+                const response = await fetch("/api/hitpay/create", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify({
+                        amount: grandTotal,
+                        customer_id: 1,
+                        warehouse_id: 1 // or pass sale_id if created beforehand
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.redirect_url && data.reference) {
+                    // 2) open new tab (checkout)
+                    const win = window.open(data.redirect_url, "_blank", "noopener,noreferrer,width=600,height=800");
+                    // if (!win) {
+                    //     // popup blocked
+                    //     dispatch(addToast({
+                    //         text: getFormattedMessage("pos.payment.popup_blocked") || "Please allow popups to proceed with payment.",
+                    //         type: toastType.ERROR,
+                    //     }));
+                    //     setProcessing(false);
+                    //     return;
+                    // }
+                    if (!win) {
+                        dispatch(addToast({
+                            text: "Please allow popups to proceed with payment.",
+                            type: toastType.ERROR,
+                        }));
+                        return;
+                    }
+
+                    // 3) start polling for status using returned reference
+                    setProcessingMessage('Waiting for payment confirmation...');
+                    startPolling(data.reference, (payment) => {
+                        // onComplete — optionally update local cart/order
+                        // Example: mark order as paid, clear cart etc.
+                        setUpdateProducts([]);
+                        setCartItemValue({
+                            discount_type: discountType.FIXED,
+                            discount_value: 0,
+                            discount: 0,
+                            tax: 0,
+                            shipping: 0,
+                        });
+                        // close modal done above
+                    });
+                } else {
+                    setProcessing(false);
+                    dispatch(addToast({
+                        text: "HitPay failed to create payment.",
+                        type: toastType.ERROR,
+                    }));
+                    console.error('HitPay create error', data);
+                }
+            } catch (e) {
+                setProcessing(false);
+                dispatch(addToast({
+                    text: "HitPay error occurred",
+                    type: toastType.ERROR,
+                }));
+                console.error(e);
+            }
+        };
+
+        const onCancelProcessing = () => {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            setProcessing(false);
+        };
+
+
+
+
     return (
         // <div className='d-xl-flex align-items-center justify-content-between'>
         //      <h5 className='mb-0'>Payment Method</h5>
@@ -255,14 +391,20 @@ const PaymentButton = (props) => {
                 />
             </Button>
             <Button
-                type="button"
-                variant="success"
-                className="text-white text-nowrap w-100 py-1 py-sm-3 rounded-10 px-1 px-sm-3 pos-pay-btn"
-                onClick={openPaymentModel}
-            >
-                {getFormattedMessage("pos-pay-now.btn")}
-                <i className="ms-2 fa fa-money-bill" />
+                    type="button"
+                    variant="success"
+                    className="text-white text-nowrap w-100 py-1 py-sm-3 rounded-10 px-1 px-sm-3 pos-pay-btn"
+                    onClick={payWithHitPay}
+                >
+                    {getFormattedMessage("pos-pay-now.btn")}
+                    <i className="ms-2 fa fa-money-bill" />
             </Button>
+
+            <ProcessingModal
+                show={processing}
+                onCancel={onCancelProcessing}
+                message={processingMessage}
+            />
             {/*<Button type='button' className='text-white me-xl-3 me-2 mb-2 custom-btn-size'>*/}
             {/*    Debit<i className='ms-2 fa fa-credit-card text-white'/></Button>*/}
             {/*<Button type='button' variant='secondary' className='me-xl-0 me-2 mb-2 custom-btn-size'>*/}

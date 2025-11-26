@@ -40,6 +40,7 @@ use App\Http\Controllers\API\TaxesAPIController;
 use App\Http\Controllers\MailTemplateAPIController;
 use App\Http\Controllers\API\PaymentMethodAPIController; // Changed
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HitpayController;
 
 /*
 |--------------------------------------------------------------------------
@@ -451,5 +452,17 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 Route::get('front-cms', [SettingAPIController::class, 'getFrontCms']);
 
 Route::post('validate-auth-token', [AuthController::class, 'isValidToken']);
+
+Route::post('/hitpay/create', [HitpayController::class, 'createPayment']);
+Route::post('/hitpay/webhook', [HitpayController::class, 'webhook']);
+Route::get('/hitpay/callback', [HitpayController::class, 'callback']);
+Route::get('/hitpay/status/{reference}', [HitpayController::class, 'status']);
+
+Route::post('/payment/hitpay/webhook', [HitpayController::class, 'webhook'])
+    ->name('hitpay.webhook');
+
+Route::get('/sale/status/{reference}', function ($reference) {
+    return \App\Models\Sale::where('reference_code', $reference)->firstOrFail();
+});
 
 require __DIR__ . '/m1.php';

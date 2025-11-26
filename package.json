@@ -9,7 +9,7 @@
         "prod": "npm run production",
         "production": "mix --production",
         "rtl": "webpack --config webpack-rtl.config.js",
-        "build": "react-scripts --max_old_space_size=4096 build"
+        "build": "npm run prod"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^5.16.2",

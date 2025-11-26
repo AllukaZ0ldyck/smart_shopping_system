@@ -12,6 +12,11 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'api/hitpay/create',
+        'api/hitpay/webhook',
+        'hitpay/webhook',
+        'payment/hitpay/webhook',
     ];
+
+
 }

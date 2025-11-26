@@ -54,6 +54,9 @@ import { fetchPaymentMethods } from "../../store/action/paymentMethodAction.js";
 import { setCartProduct } from "../../store/action/cartAction.js";
 import RecentSaleModal from "./recentSaleModal/RecentSaleModal.js";
 import { fetchSales } from "../../store/action/salesAction.js";
+import { useLocation } from "react-router";
+
+// const location = useLocation();
 
 const PosMainPage = (props) => {
     const {
@@ -156,6 +159,56 @@ const PosMainPage = (props) => {
     const grandTotal = (
         Number(mainTotal) + Number(cartItemValue.shipping)
     ).toFixed(2);
+    const location = useLocation();
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const reference = params.get("reference");
+        const status = params.get("status");
+
+        if (!reference) return;
+
+        // 1) Close the Processing Modal if open
+        const modal = document.querySelector('.processing-modal');
+        if (modal) modal.style.display = 'none';
+
+        // 2) If payment succeeded, show print slip
+        if (status === "success") {
+            dispatch(addToast({
+                text: "Payment successful!",
+                type: toastType.SUCCESS,
+            }));
+
+            // Load sale data here if not already loaded (optional)
+            // dispatch(fetchSaleByReference(reference))
+
+            // 3) auto-print using existing block:
+            setModalShowPaymentSlip(true);
+
+            setTimeout(() => {
+                // Auto-trigger print
+                document.getElementById("printReceipt")?.click();
+            }, 800);
+
+            // 4) Redirect back to clean POS screen
+            setTimeout(() => {
+                navigate("/#/app/pos");
+                window.history.replaceState({}, "", "/pos");
+            }, 2500);
+        }
+
+        if (status === "failed") {
+            dispatch(addToast({
+                text: "Payment failed.",
+                type: toastType.ERROR,
+            }));
+
+            // Auto-close modal and return
+            setTimeout(() => {
+                navigate("/#/app/pos");
+            }, 1500);
+        }
+    }, [location.search]);
+
 
     useEffect(() => {
         setPaymentPrint({
@@ -388,6 +441,7 @@ const PosMainPage = (props) => {
         dispatch(setCartProduct(newCartData));  
         localStorage.setItem('cart-sync', JSON.stringify(newCartData));
     }, [updateProducts, selectedCustomerOption, selectedOption, cartItemValue, subTotal, grandTotal, cashPaymentValue, paymentValue]);
+    
 
     const onChangeCart = (event) => {
         if(updateProducts.length == 0){
