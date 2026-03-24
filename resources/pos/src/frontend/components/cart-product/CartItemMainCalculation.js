@@ -5,7 +5,6 @@ import {
     currencySymbolHandling,
     decimalValidate,
     getFormattedMessage,
-    numValidate,
     placeholderText,
 } from "../../../shared/sharedMethod";
 import { discountType } from "../../../constants";
@@ -19,38 +18,12 @@ const CartItemMainCalculation = (props) => {
         grandTotal,
         frontSetting,
         allConfigData,
-        onChangeTaxCart,
     } = props;
 
     return (
         <div className="calculation mt-5">
             <Row className="total-price">
                 <div className="col-6 mb-2">
-                    <Form.Group className="calculation__filed-grp mb-2">
-                        <InputGroup>
-                            <FormControl
-                                type="text"
-                                id="tax"
-                                name="tax"
-                                min="0"
-                                step=".01"
-                                placeholder={placeholderText(
-                                    "globally.detail.tax"
-                                )}
-                                onChange={(e) => onChangeTaxCart(e)}
-                                onKeyPress={(event) => numValidate(event)}
-                                value={
-                                    cartItemValue.tax === 0
-                                        ? ""
-                                        : cartItemValue.tax
-                                }
-                                className="rounded-1 pe-8"
-                            />
-                            <InputGroup.Text className="position-absolute top-0 bottom-0 end-0 bg-transparent border-0">
-                                %
-                            </InputGroup.Text>
-                        </InputGroup>
-                    </Form.Group>
                     <Form.Group className="calculation__filed-grp mb-2" controlId="discountType">
                         <div className="d-flex flex-lg-nowrap flex-wrap gap-3">
                             <Form.Label className="mb-0">{getFormattedMessage("globally.detail.discount")}</Form.Label>
@@ -110,30 +83,7 @@ const CartItemMainCalculation = (props) => {
                         </InputGroup>
                     </Form.Group>
                     <Form.Group className="calculation__filed-grp mb-2">
-                        <InputGroup>
-                            <FormControl
-                                type="text"
-                                id="shipping"
-                                name="shipping"
-                                min="0"
-                                step=".01"
-                                placeholder={placeholderText(
-                                    "purchase.input.shipping.label"
-                                )}
-                                onChange={(e) => onChangeCart(e)}
-                                onKeyPress={(event) => decimalValidate(event)}
-                                value={
-                                    cartItemValue.shipping === 0
-                                        ? ""
-                                        : cartItemValue.shipping
-                                }
-                                className="rounded-1 pe-8"
-                            />
-                            <InputGroup.Text className="position-absolute top-0 bottom-0 end-0 bg-transparent border-0">
-                                {frontSetting.value &&
-                                    frontSetting.value.currency_symbol}
-                            </InputGroup.Text>
-                        </InputGroup>
+                        {/* Shipping is intentionally hidden for POS online-payment flow */}
                     </Form.Group>
                 </div>
                 <div className="col-6 d-flex flex-column justify-content-end text-end align-items-end mb-2">

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+usage() {
+    cat <<EOF
+Usage: ./lan-start [port]
+
+Starts Laravel on LAN (0.0.0.0) and prints the URL to open from MacBook/iPad/tablet.
+
+Examples:
+  ./lan-start
+  ./lan-start 18000
+EOF
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    usage
+    exit 0
+fi
+
+PORT="${1:-18000}"
+[[ "$PORT" =~ ^[0-9]+$ ]] || {
+    echo "Port must be a number. Received: $PORT" >&2
+    exit 1
+}
+
+has() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+get_local_ip() {
+    local ip=""
+
+    if has ipconfig; then
+        ip="$(ipconfig getifaddr en0 2>/dev/null || true)"
+        [[ -n "$ip" ]] || ip="$(ipconfig getifaddr en1 2>/dev/null || true)"
+    fi
+
+    if [[ -z "$ip" ]] && has hostname; then
+        ip="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+    fi
+
+    if [[ -z "$ip" ]] && has ip; then
+        ip="$(ip route get 1.1.1.1 2>/dev/null | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") {print $(i+1); exit}}' || true)"
+    fi
+
+    echo "$ip"
+}
+
+IP="$(get_local_ip)"
+[[ -n "$IP" ]] || {
+    echo "Could not detect local IP address." >&2
+    echo "Connect to Wi-Fi/Ethernet and try again." >&2
+    exit 1
+}
+
+if [[ ! -f .env ]]; then
+    cp .env.example .env
+fi
+
+if has php; then
+    php artisan config:clear >/dev/null 2>&1 || true
+else
+    echo "php is not installed or not on PATH." >&2
+    exit 1
+fi
+
+echo
+echo "LAN mode ready."
+echo "Dashboard (MacBook): http://$IP:$PORT"
+echo "POS (iPad/Tablet):   http://$IP:$PORT"
+echo
+echo "Make sure all devices are on the same Wi-Fi/LAN."
+echo "Running Laravel server on 0.0.0.0:$PORT ..."
+echo
+
+php artisan serve --host=0.0.0.0 --port="$PORT"

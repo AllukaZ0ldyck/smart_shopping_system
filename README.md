@@ -1,3 +1,66 @@
+## Quick Setup
+
+After cloning the repository, run:
+
+```bash
+chmod +x setup
+./setup
+```
+
+What `./setup` does:
+
+- Installs required system tools on macOS or apt-based Linux: PHP 8.1, Composer, Node.js 18, and MySQL.
+- Creates `.env` from `.env.example` if needed.
+- Installs Composer and npm dependencies.
+- Generates the Laravel app key and creates the storage symlink.
+- Tries to create the MySQL database and run migrations.
+- Builds frontend assets.
+
+Optional flags:
+
+- `./setup --import-sql` to also import `database/pos.sql`.
+- `./setup --skip-system-packages` if the machine already has PHP, Composer, Node, npm, and MySQL installed.
+- `./setup --skip-migrations` if you want to handle the database manually.
+
+After setup, start the app with:
+
+```bash
+php artisan serve
+npm run watch
+```
+
+If MySQL credentials on the new machine are different, update `.env` and rerun `php artisan migrate`.
+
+## LAN Setup (MacBook + iPad/Tablet)
+
+Use this when you want the dashboard on MacBook and POS on iPad/tablet, sharing one database.
+
+1. On MacBook, run setup once:
+
+```bash
+./setup --skip-system-packages
+```
+
+2. Start LAN server from the project root:
+
+```bash
+chmod +x lan-start
+./lan-start 18000
+```
+
+3. On both devices (same Wi-Fi), open the URL shown by the script, for example:
+
+```text
+http://192.168.1.25:18000
+```
+
+Notes:
+- Both dashboard and POS use the same backend instance running on the MacBook.
+- Because it is one backend, both devices are automatically connected to the same MySQL database configured in MacBook `.env`.
+- If macOS firewall prompts for PHP access, allow incoming connections.
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
 <p align="center">

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Payments\HitPayRedirectController;
+use App\Http\Controllers\Payments\HitPayWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,5 +18,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/payments/redirect', HitPayRedirectController::class)->name('payments.hitpay.redirect');
+Route::post('/payments/hitpay/webhook', HitPayWebhookController::class)->name('payments.hitpay.webhook');
 
 include 'upgrade.php';

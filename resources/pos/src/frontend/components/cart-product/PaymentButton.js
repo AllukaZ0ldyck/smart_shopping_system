@@ -6,6 +6,7 @@ import { discountType, toastType } from "../../../constants";
 import { getFormattedMessage } from "../../../shared/sharedMethod";
 import ResetCartConfirmationModal from "./ResetCartConfirmationModal";
 import HoldCartConfirmationModal from "./HoldCartConfirmationModal";
+import OnlinePaymentRedirectModal from "./OnlinePaymentRedirectModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHand,
@@ -17,7 +18,6 @@ import { addHoldList } from "../../../store/action/pos/HoldListAction";
 const PaymentButton = (props) => {
     const {
         updateProducts,
-        setCashPayment,
         cartItemValue,
         grandTotal,
         subTotal,
@@ -25,26 +25,21 @@ const PaymentButton = (props) => {
         setUpdateProducts,
         holdListId,
         setHoldListValue,
-        updateCart,
         selectedCustomerOption,
         selectedOption,
         cashPaymentValue,
         setUpdateHoldList,
+        onPayNowOnline,
     } = props;
     const dispatch = useDispatch();
     const qtyCart = updateProducts.filter((a) => a.quantity === 0);
     const [isReset, setIsReset] = useState(false);
     const [isHold, setIsHold] = useState(false);
+    const [isOnlineRedirectConfirm, setIsOnlineRedirectConfirm] = useState(false);
 
     //cash model open onClick
     const openPaymentModel = () => {
-        if (
-            !updateProducts.length > 0 ||
-            qtyCart.length > 0 ||
-            cartItemValue.tax > 100 ||
-            // Number(cartItemValue.discount) > grandTotal ||
-            Number(cartItemValue.shipping) > Number(subTotal)
-        ) {
+        if (!updateProducts.length > 0 || qtyCart.length > 0) {
             !updateProducts.length > 0 &&
                 dispatch(
                     addToast({
@@ -63,38 +58,8 @@ const PaymentButton = (props) => {
                         type: toastType.ERROR,
                     })
                 );
-            updateProducts.length > 0 &&
-                cartItemValue.tax > 100 &&
-                dispatch(
-                    addToast({
-                        text: getFormattedMessage(
-                            "pos.cash-payment.tax-error.message"
-                        ),
-                        type: toastType.ERROR,
-                    })
-                );
-            // updateProducts.length > 0 &&
-            //     Number(cartItemValue.discount) > grandTotal &&
-            //     dispatch(
-            //         addToast({
-            //             text: getFormattedMessage(
-            //                 "pos.cash-payment.total-amount-error.message"
-            //             ),
-            //             type: toastType.ERROR,
-            //         })
-            //     );
-            updateProducts.length > 0 &&
-                Number(cartItemValue.shipping) > Number(subTotal) &&
-                dispatch(
-                    addToast({
-                        text: getFormattedMessage(
-                            "pos.cash-payment.sub-total-amount-error.message"
-                        ),
-                        type: toastType.ERROR,
-                    })
-                );
         } else if (updateProducts.length > 0 && !qtyCart.length) {
-            setCashPayment(true);
+            setIsOnlineRedirectConfirm(true);
         }
     };
 
@@ -219,6 +184,12 @@ const PaymentButton = (props) => {
     const onCancel = () => {
         setIsReset(false);
         setIsHold(false);
+        setIsOnlineRedirectConfirm(false);
+    };
+
+    const onConfirmOnlineRedirect = () => {
+        setIsOnlineRedirectConfirm(false);
+        onPayNowOnline();
     };
 
     const onChangeInput = (e) => {
@@ -280,6 +251,12 @@ const PaymentButton = (props) => {
                     onConfirm={onConfirmHoldList}
                     onCancel={onCancel}
                     itemName={getFormattedMessage("globally.detail.product")}
+                />
+            )}
+            {isOnlineRedirectConfirm && (
+                <OnlinePaymentRedirectModal
+                    onConfirm={onConfirmOnlineRedirect}
+                    onCancel={onCancel}
                 />
             )}
         </div>

@@ -17,6 +17,7 @@ import ProductDetailsModel from "../shared/ProductDetailsModel";
 import CartItemMainCalculation from "./cart-product/CartItemMainCalculation";
 import PosHeader from "./header/PosHeader";
 import { posCashPaymentAction } from "../../store/action/pos/posCashPaymentAction";
+import { posHitPayCheckoutAction } from "../../store/action/pos/posHitPayCheckoutAction";
 import PaymentButton from "./cart-product/PaymentButton";
 import CashPaymentModel from "./cart-product/paymentModel/CashPaymentModel";
 import PrintData from "./printModal/PrintData";
@@ -28,7 +29,6 @@ import {
     posAllProduct,
 } from "../../store/action/pos/posAllProductAction";
 import TabTitle from "../../shared/tab-title/TabTitle";
-import HeaderAllButton from "./header/HeaderAllButton";
 import RegisterDetailsModel from "./register-detailsModal/RegisterDetailsModel";
 import PrintRegisterDetailsData from "./printModal/PrintRegisterDetailsData";
 import {
@@ -40,7 +40,7 @@ import {
     getFormattedMessage,
     getFormattedOptions,
 } from "../../shared/sharedMethod";
-import { discountType, paymentMethodOptions, toastType } from "../../constants";
+import { discountType, paymentMethodOptions, paymentStatusOptionsConstant, toastType } from "../../constants";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import CustomerForm from "./customerModel/CustomerForm";
 import HoldListModal from "./holdListModal/HoldListModal";
@@ -57,10 +57,10 @@ import { fetchSales } from "../../store/action/salesAction.js";
 
 const PosMainPage = (props) => {
     const {
-        onClickFullScreen,
         posAllProducts,
         customCart,
         posCashPaymentAction,
+        posHitPayCheckoutAction,
         frontSetting,
         settings,
         fetchSetting,
@@ -235,33 +235,33 @@ const PosMainPage = (props) => {
         }
     }, [quantity, grandTotal, cashPayment]);
 
-    const handleValidation = () => {
+    const handleValidation = (paymentInput = cashPaymentValue) => {
         let errors = {};
         let isValid = false;
         if (
-            cashPaymentValue["notes"] &&
-            cashPaymentValue["notes"].length > 100
+            paymentInput["notes"] &&
+            paymentInput["notes"].length > 100
         ) {
             errors["notes"] =
                 "The notes must not be greater than 100 characters";
         }
 
         if (
-            cashPaymentValue?.payment_status?.value == 1 ||
-            cashPaymentValue?.payment_status?.value == 3
+            paymentInput?.payment_status?.value == 1 ||
+            paymentInput?.payment_status?.value == 3
         ) {
             const paymentErrors = [];
             let totalAmount = 0;
-            const isMultiplePayments = cashPaymentValue.payment_details?.length > 1;
-            const totalAmounts = cashPaymentValue.payment_details?.reduce((sum, item) => {
+            const isMultiplePayments = paymentInput.payment_details?.length > 1;
+            const totalAmounts = paymentInput.payment_details?.reduce((sum, item) => {
                 const amount = parseFloat(item.amount);
                 return !isNaN(amount) && amount > 0 ? sum + amount : sum;
             }, 0) || 0;
 
-            if (!cashPaymentValue.payment_details || cashPaymentValue.payment_details.length === 0) {
+            if (!paymentInput.payment_details || paymentInput.payment_details.length === 0) {
                 errors["payment_details"] = "At least one payment method is required";
             } else {
-                cashPaymentValue.payment_details.forEach((item, index) => {
+                paymentInput.payment_details.forEach((item, index) => {
                     const entryError = {};
                     const amount = parseFloat(item.amount);
 
@@ -535,7 +535,7 @@ const PosMainPage = (props) => {
     };
 
     //prepare data for payment api
-    const prepareData = (updateProducts) => {
+    const prepareData = (updateProducts, paymentInput = cashPaymentValue) => {
         const formValue = {
             date: moment(new Date()).locale('en').format("YYYY-MM-DD"),
             customer_id:
@@ -548,7 +548,7 @@ const PosMainPage = (props) => {
                     : selectedOption && selectedOption.value,
             sale_items: updateProducts,
             grand_total: grandTotal,
-            ...(cashPaymentValue?.payment_status?.value == 1
+            ...(paymentInput?.payment_status?.value == 1
                 ? { payment_type: paymentValue?.payment_type?.value || paymentTypeDefaultValue && paymentTypeDefaultValue[0].value }
                 : {}),
             discount: cartItemValue.discount,
@@ -556,20 +556,20 @@ const PosMainPage = (props) => {
             discount_value: parseInt(cartItemValue.discount_value),
             shipping: cartItemValue.shipping,
             tax_rate: cartItemValue.tax,
-            note: cashPaymentValue.notes,
+            note: paymentInput.notes,
             status: 1,
             hold_ref_no: hold_ref_no,
-            payment_status: cashPaymentValue?.payment_status?.value,
-            payment_details: (cashPaymentValue?.payment_status?.value == 1 || cashPaymentValue?.payment_status?.value == 3)
-                ? cashPaymentValue.payment_details?.length === 1 &&
-                    parseFloat(cashPaymentValue.payment_details[0]?.amount) > parseFloat(grandTotal)
+            payment_status: paymentInput?.payment_status?.value,
+            payment_details: (paymentInput?.payment_status?.value == 1 || paymentInput?.payment_status?.value == 3)
+                ? paymentInput.payment_details?.length === 1 &&
+                    parseFloat(paymentInput.payment_details[0]?.amount) > parseFloat(grandTotal)
                     ? [
                         {
-                            ...cashPaymentValue.payment_details[0],
+                            ...paymentInput.payment_details[0],
                             amount: grandTotal,
                         },
                     ]
-                    : cashPaymentValue.payment_details || []
+                    : paymentInput.payment_details || []
                 : []
         };
         return formValue;
@@ -614,6 +614,58 @@ const PosMainPage = (props) => {
                     amount: '',
                     payment_type: ''
                 }]
+            });
+            dispatch(fetchTax());
+            setCartProductIds("");
+        }
+    };
+
+    const onHitPayCheckout = (event = null) => {
+        if (event?.preventDefault) {
+            event.preventDefault();
+        }
+
+        const onlinePaymentValue = {
+            ...cashPaymentValue,
+            payment_status: {
+                label: getFormattedMessage("payment-status.filter.unpaid.label"),
+                value: paymentStatusOptionsConstant.UNPAID,
+            },
+            payment_details: [],
+        };
+
+        const valid = handleValidation(onlinePaymentValue);
+
+        if (valid) {
+            posHitPayCheckoutAction(
+                prepareData(updateProducts, onlinePaymentValue),
+                setUpdateProducts,
+                handleCashPayment,
+                {
+                    brandId,
+                    categoryId,
+                    selectedOption,
+                }
+            );
+            setCashPaymentValue({
+                notes: "",
+                payment_status: {
+                    label: getFormattedMessage(
+                        "dashboard.recentSales.paid.label"
+                    ),
+                    value: 1,
+                },
+                payment_details: [{
+                    amount: '',
+                    payment_type: ''
+                }]
+            });
+            setCartItemValue({
+                discount_type: discountType.FIXED,
+                discount_value: 0,
+                discount: 0,
+                tax: 0,
+                shipping: 0,
             });
             dispatch(fetchTax());
             setCartProductIds("");
@@ -879,6 +931,7 @@ const PosMainPage = (props) => {
                                     setHoldListValue={setHoldListValue}
                                     selectedCustomerOption={selectedCustomerOption}
                                     setUpdateHoldList={setUpdateHoldList}
+                                    onPayNowOnline={onHitPayCheckout}
                                 />
                             </div>
                         </div>
@@ -896,18 +949,7 @@ const PosMainPage = (props) => {
                             // handleOnSelect={handleOnSelect} handleOnSearch={handleOnSearch}
                             // searchString={searchString}
                             />
-                            <HeaderAllButton
-                                holdListData={holdListData}
-                                goToHoldScreen={onClickHoldModel}
-                                goToDetailScreen={onClickDetailsModel}
-                                onClickFullScreen={onClickFullScreen}
-                                opneCalculator={openCalculator}
-                                setOpneCalculator={setOpenCalculator}
-                                handleClickCloseRegister={
-                                    handleClickCloseRegister
-                                }
-                                goToRecentSales={onClickRecentSalesModal}
-                            />
+                            {/* Shortcut buttons hidden per POS requirement */}
                         </div>
                         <div className="custom-card h-100 mb-3">
                             <div className="p-3">
@@ -960,6 +1002,7 @@ const PosMainPage = (props) => {
                     onPaymentTypeChange={onPaymentTypeChange}
                     grandTotal={grandTotal}
                     onCashPayment={onCashPayment}
+                    onHitPayCheckout={onHitPayCheckout}
                     taxTotal={taxTotal}
                     handleCashPayment={handleCashPayment}
                     settings={settings}
@@ -1056,6 +1099,7 @@ export default connect(mapStateToProps, {
     fetchSetting,
     posSearchNameProduct,
     posCashPaymentAction,
+    posHitPayCheckoutAction,
     posSearchCodeProduct,
     posAllProduct,
     fetchBrandClickable,

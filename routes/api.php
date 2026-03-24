@@ -10,6 +10,7 @@ use App\Http\Controllers\API\CustomerAPIController;
 use App\Http\Controllers\API\DashboardAPIController;
 use App\Http\Controllers\API\ExpenseAPIController;
 use App\Http\Controllers\API\ExpenseCategoryAPIController;
+use App\Http\Controllers\API\HitPayCheckoutAPIController;
 use App\Http\Controllers\API\HoldAPIController;
 use App\Http\Controllers\API\LanguageAPIController;
 use App\Http\Controllers\API\MainProductAPIController;
@@ -191,6 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('sale-info/{sale}', [SaleAPIController::class, 'saleInfo'])->name('sale-info');
 
         Route::post('sales/{sale}/capture-payment', [SalesPaymentAPIController::class, 'createSalePayment']);
+        Route::post('sales/{sale}/hitpay/checkout', [HitPayCheckoutAPIController::class, 'store']);
         Route::get('sales/{sale}/payments', [SalesPaymentAPIController::class, 'getAllPayments']);
         Route::post('sales/{salesPayment}/payment', [SalesPaymentAPIController::class, 'updateSalePayment']);
         Route::delete('sales/{id}/payment', [SalesPaymentAPIController::class, 'deletePayment']);

@@ -24,6 +24,7 @@ const CashPaymentModel = (props) => {
         cashPayment,
         onChangeInput,
         onCashPayment,
+        onHitPayCheckout,
         grandTotal,
         totalQty,
         cartItemValue,
@@ -123,7 +124,7 @@ const CashPaymentModel = (props) => {
             cashPaymentValue?.payment_status?.value === paymentStatusOptionsConstant.PAID ||
             cashPaymentValue?.payment_status?.value === paymentStatusOptionsConstant.PARTIAL
         ) {
-            const { paymentErrors } = validatePaymentDetails();
+            const paymentErrors = validatePaymentDetails();
 
             const hasErrors = paymentErrors?.some(error => Object.keys(error).length > 0);
             if (hasErrors) {
@@ -564,6 +565,9 @@ const CashPaymentModel = (props) => {
                 </button>
                 <button className="btn btn-primary" type="button" onClick={(e) => handleSave(e, true)}>
                     {getFormattedMessage("globally.submit-and-print-button")}
+                </button>
+                <button className="btn btn-outline-primary" type="button" onClick={(e) => onHitPayCheckout(e)}>
+                    Pay Online
                 </button>
                 <button
                     type="button"

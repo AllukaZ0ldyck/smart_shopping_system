@@ -1,0 +1,359 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+PHP_VERSION="8.1"
+NODE_MAJOR="18"
+IMPORT_SQL=false
+SKIP_SYSTEM_PACKAGES=false
+SKIP_MIGRATIONS=false
+
+log() {
+    printf '\n[%s] %s\n' "setup" "$1"
+}
+
+warn() {
+    printf '\n[%s] %s\n' "warning" "$1" >&2
+}
+
+fail() {
+    printf '\n[%s] %s\n' "error" "$1" >&2
+    exit 1
+}
+
+has() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+read_env_value() {
+    local key="$1"
+    local env_file="${2:-.env}"
+
+    if [[ ! -f "$env_file" ]]; then
+        return 1
+    fi
+
+    awk -F= -v key="$key" '
+        $1 == key {
+            value = substr($0, index($0, "=") + 1)
+            gsub(/^"/, "", value)
+            gsub(/"$/, "", value)
+            print value
+            exit
+        }
+    ' "$env_file"
+}
+
+usage() {
+    cat <<EOF
+Usage: ./setup [options]
+
+Options:
+  --import-sql           Import database/pos.sql after migrations if possible
+  --skip-system-packages Skip Homebrew/apt package installation
+  --skip-migrations      Skip database creation and php artisan migrate
+  --help                 Show this help text
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --import-sql)
+            IMPORT_SQL=true
+            ;;
+        --skip-system-packages)
+            SKIP_SYSTEM_PACKAGES=true
+            ;;
+        --skip-migrations)
+            SKIP_MIGRATIONS=true
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            fail "Unknown option: $1"
+            ;;
+    esac
+    shift
+done
+
+detect_os() {
+    case "$(uname -s)" in
+        Darwin)
+            echo "macos"
+            ;;
+        Linux)
+            echo "linux"
+            ;;
+        *)
+            echo "unsupported"
+            ;;
+    esac
+}
+
+configure_brew_path() {
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+}
+
+install_homebrew() {
+    if has brew; then
+        configure_brew_path
+        return
+    fi
+
+    log "Installing Homebrew"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    configure_brew_path
+    has brew || fail "Homebrew installation failed."
+}
+
+install_macos_packages() {
+    install_homebrew
+
+    local packages=(
+        "php@${PHP_VERSION}"
+        "composer"
+        "node@${NODE_MAJOR}"
+        "mysql"
+    )
+
+    log "Installing macOS packages with Homebrew"
+    for package in "${packages[@]}"; do
+        if brew list "$package" >/dev/null 2>&1; then
+            log "$package already installed"
+        else
+            brew install "$package"
+        fi
+    done
+
+    brew link --overwrite --force "php@${PHP_VERSION}" >/dev/null 2>&1 || true
+    brew link --overwrite --force "node@${NODE_MAJOR}" >/dev/null 2>&1 || true
+    brew services start mysql >/dev/null 2>&1 || true
+
+    export PATH="$(brew --prefix "php@${PHP_VERSION}")/bin:$(brew --prefix "node@${NODE_MAJOR}")/bin:$PATH"
+}
+
+install_linux_packages() {
+    has apt-get || fail "Only apt-based Linux distributions are supported by this setup script."
+
+    log "Updating apt package lists"
+    sudo apt-get update
+
+    log "Installing base Linux packages"
+    sudo apt-get install -y software-properties-common ca-certificates curl gnupg unzip git
+
+    if ! apt-cache show "php${PHP_VERSION}" >/dev/null 2>&1; then
+        log "Adding PHP repository for PHP ${PHP_VERSION}"
+        sudo add-apt-repository -y ppa:ondrej/php
+        sudo apt-get update
+    fi
+
+    if ! has node || [[ "$(node -v 2>/dev/null)" != v${NODE_MAJOR}* ]]; then
+        log "Configuring NodeSource for Node ${NODE_MAJOR}"
+        curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
+    fi
+
+    log "Installing Linux packages"
+    sudo apt-get install -y \
+        "php${PHP_VERSION}" \
+        "php${PHP_VERSION}-bcmath" \
+        "php${PHP_VERSION}-cli" \
+        "php${PHP_VERSION}-curl" \
+        "php${PHP_VERSION}-intl" \
+        "php${PHP_VERSION}-mbstring" \
+        "php${PHP_VERSION}-mysql" \
+        "php${PHP_VERSION}-xml" \
+        "php${PHP_VERSION}-zip" \
+        composer \
+        nodejs \
+        mysql-server
+
+    sudo systemctl enable --now mysql >/dev/null 2>&1 || sudo service mysql start >/dev/null 2>&1 || true
+}
+
+install_system_packages() {
+    local os
+    os="$(detect_os)"
+
+    case "$os" in
+        macos)
+            install_macos_packages
+            ;;
+        linux)
+            install_linux_packages
+            ;;
+        *)
+            fail "Unsupported operating system. Use macOS or an apt-based Linux distro."
+            ;;
+    esac
+}
+
+ensure_runtime_tools() {
+    has php || fail "php is not installed or not on PATH."
+    has composer || fail "composer is not installed or not on PATH."
+    has node || fail "node is not installed or not on PATH."
+    has npm || fail "npm is not installed or not on PATH."
+}
+
+prepare_env() {
+    if [[ ! -f .env ]]; then
+        log "Creating .env from .env.example"
+        cp .env.example .env
+    else
+        log ".env already exists, keeping current values"
+    fi
+}
+
+install_app_dependencies() {
+    log "Installing Composer dependencies"
+    composer install --no-interaction --prefer-dist
+
+    log "Installing npm dependencies"
+    npm ci --legacy-peer-deps
+}
+
+run_laravel_setup() {
+    if [[ -z "$(read_env_value APP_KEY .env || true)" ]]; then
+        log "Generating Laravel app key"
+        php artisan key:generate --force
+    else
+        log "APP_KEY already exists, keeping current value"
+    fi
+
+    log "Creating storage symlink if needed"
+    php artisan storage:link >/dev/null 2>&1 || true
+}
+
+mysql_exec() {
+    local sql="$1"
+
+    if mysql -uroot -e "$sql" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if mysql -uroot -proot -e "$sql" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if sudo mysql -e "$sql" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    return 1
+}
+
+create_database_if_possible() {
+    local db_name db_user db_pass
+    db_name="$(read_env_value DB_DATABASE .env || true)"
+    db_user="$(read_env_value DB_USERNAME .env || true)"
+    db_pass="$(read_env_value DB_PASSWORD .env || true)"
+
+    if [[ -z "$db_name" ]]; then
+        warn "DB_DATABASE is empty; skipping database bootstrap."
+        return 0
+    fi
+
+    if ! has mysql; then
+        warn "mysql client not found; skipping database bootstrap."
+        return 0
+    fi
+
+    log "Trying to create database ${db_name}"
+    if ! mysql_exec "CREATE DATABASE IF NOT EXISTS \`$db_name\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"; then
+        warn "Could not create the MySQL database automatically. Update .env and create it manually if needed."
+        return 0
+    fi
+
+    if [[ -n "$db_user" && "$db_user" != "root" ]]; then
+        log "Trying to create database user ${db_user}"
+        mysql_exec "CREATE USER IF NOT EXISTS '$db_user'@'localhost' IDENTIFIED BY '$db_pass';" || true
+        mysql_exec "CREATE USER IF NOT EXISTS '$db_user'@'127.0.0.1' IDENTIFIED BY '$db_pass';" || true
+        mysql_exec "GRANT ALL PRIVILEGES ON \`$db_name\`.* TO '$db_user'@'localhost';" || true
+        mysql_exec "GRANT ALL PRIVILEGES ON \`$db_name\`.* TO '$db_user'@'127.0.0.1'; FLUSH PRIVILEGES;" || true
+    fi
+}
+
+run_migrations() {
+    log "Running Laravel migrations"
+    if ! php artisan migrate --force; then
+        warn "Migrations failed. This usually means MySQL credentials in .env still need adjustment."
+    fi
+}
+
+import_sql_dump() {
+    local db_name
+    db_name="$(read_env_value DB_DATABASE .env || true)"
+
+    if [[ ! -f database/pos.sql ]]; then
+        warn "database/pos.sql not found; skipping SQL import."
+        return 0
+    fi
+
+    if [[ -z "$db_name" ]]; then
+        warn "DB_DATABASE is empty; skipping SQL import."
+        return 0
+    fi
+
+    log "Trying to import database/pos.sql into ${db_name}"
+    if mysql -uroot "$db_name" < database/pos.sql 2>/dev/null; then
+        return 0
+    fi
+
+    if mysql -uroot -proot "$db_name" < database/pos.sql 2>/dev/null; then
+        return 0
+    fi
+
+    if sudo mysql "$db_name" < database/pos.sql 2>/dev/null; then
+        return 0
+    fi
+
+    warn "Could not import database/pos.sql automatically."
+}
+
+build_frontend() {
+    log "Building frontend assets"
+    npm run dev
+}
+
+print_summary() {
+    cat <<EOF
+
+Setup finished.
+
+Next commands:
+  php artisan serve
+  npm run watch
+
+If MySQL credentials differ on this machine, update .env and rerun:
+  php artisan migrate
+EOF
+}
+
+if [[ "$SKIP_SYSTEM_PACKAGES" == false ]]; then
+    install_system_packages
+fi
+
+ensure_runtime_tools
+prepare_env
+install_app_dependencies
+run_laravel_setup
+
+if [[ "$SKIP_MIGRATIONS" == false ]]; then
+    create_database_if_possible
+    run_migrations
+fi
+
+if [[ "$IMPORT_SQL" == true ]]; then
+    import_sql_dump
+fi
+
+build_frontend
+print_summary
