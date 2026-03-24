@@ -20,5 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AddPurchaseAndSalePermissionsSeeder::class);
         $this->call(AddPurchaseReturnAndSaleReturnPermissionsSeeder::class);
         $this->call(GenerateCrudPermissionsSeeder::class);
+        $this->call(FilipinoProductSeeder::class);
+        $this->call(StoreSeeder::class);
     }
 }

@@ -82,12 +82,17 @@ function App() {
 
     const [mappedRoutes, setMappedRoutes] = useState([]);
     const [redirectTo, setRedirectTo] = useState("");
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+    );
     useEffect(() => {
         setMappedRoutes(config.map(mapPermissionToRoute));
     }, [config]);
     useEffect(() => {
         if (mappedRoutes && mappedRoutes.length > 0) {
-            if (config.includes("manage_dashboard")) {
+            if (isMobileOrTablet && config.includes("manage_pos_screen")) {
+                setRedirectTo("/app/pos");
+            } else if (config.includes("manage_dashboard")) {
                 setRedirectTo("/app/dashboard");
             } else if (config.includes("manage_sale")) {
                 setRedirectTo("/app/sales");
@@ -108,6 +113,17 @@ function App() {
             setRedirectTo("/app/dashboard");
         }
     }, [mappedRoutes]);
+
+    useEffect(() => {
+        if (!token || !isMobileOrTablet) {
+            return;
+        }
+
+        const currentPath = location.pathname;
+        if (currentPath !== "/app/pos") {
+            navigate("/app/pos", { replace: true });
+        }
+    }, [token, isMobileOrTablet, location.pathname, navigate]);
 
     useEffect(() => {
         const getData = getFiles();

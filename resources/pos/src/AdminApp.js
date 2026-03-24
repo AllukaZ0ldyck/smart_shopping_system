@@ -11,6 +11,9 @@ function AdminApp(props) {
     const { config } = props;
     const token = localStorage.getItem(Tokens.ADMIN);
     const { allConfigData, loginUser } = useSelector((state) => state);
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+    );
 
     const prepareRoutes = (config) => {
         const permissions = config;
@@ -32,10 +35,14 @@ function AdminApp(props) {
     }
 
     const routes = config && prepareRoutes(config);
+    const accessibleRoutes =
+        isMobileOrTablet && token !== null
+            ? routes.filter((route) => route.path === "pos")
+            : routes;
 
     return (
         <Routes>
-            {routes.map((route, index) => {
+            {accessibleRoutes.map((route, index) => {
                 return route.ele ? (
                     <Route
                         key={index}
