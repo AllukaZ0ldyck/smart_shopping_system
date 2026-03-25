@@ -19,7 +19,7 @@ import {
     faAngleDown,
     faBell, faLanguage
 } from '@fortawesome/free-solid-svg-icons';
-import { Dropdown, Row } from "react-bootstrap";
+import { Dropdown } from "react-bootstrap";
 import { productQuantityReportAction } from '../../store/action/paymentQuantityReport';
 import { Filters } from '../../constants';
 import LanguageModel from "../user-profile/LanguageModel";
@@ -76,6 +76,15 @@ const Header = (props) => {
         })
     }
 
+    const formatDateCompact = (date) => {
+        return date.toLocaleDateString(updatedLanguage == 'gr' ? "de" : updatedLanguage === 'sp' ? "ES" : updatedLanguage === 'cn' ? "zh" : updatedLanguage, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        })
+    }
+
     const onClickDeleteModel = () => {
         setDeleteModel(!deleteModel);
     };
@@ -114,17 +123,20 @@ const Header = (props) => {
     }
 
     return (
-        <Navbar collapseOnSelect expand='lg' className='align-items-stretch ms-auto py-1'>
-            <div className='d-flex align-items-stretch justify-content-center'>
-                <Nav className='align-items-stretch justify-content-between flex-row'>
-                    <ul className='nav align-items-center flex-nowrap'>
-                        <li className="px-sm-3 px-2 d-flex align-items-center">
-                            <div className="text-end">
-                                <div className="text-primary fw-bolder fs-5">
+        <Navbar collapseOnSelect expand='lg' className='align-items-center master-layout-toolbar-navbar py-1 w-100'>
+            <div className='d-flex align-items-center justify-content-end w-100'>
+                <Nav className='align-items-center flex-row flex-nowrap'>
+                    <ul className='nav align-items-center flex-nowrap mb-0'>
+                        <li className="px-1 px-sm-2 d-flex align-items-center">
+                            <div className="text-end header-toolbar-datetime">
+                                <div className="text-primary fw-bold small lh-sm text-nowrap">
                                     {formatTime(currentTime)}
                                 </div>
-                                <div className="fs-6">
+                                <div className="text-gray-700 text-nowrap d-none d-xxl-block small">
                                     {formatDate(currentTime)}
+                                </div>
+                                <div className="text-gray-600 text-nowrap d-xxl-none small">
+                                    {formatDateCompact(currentTime)}
                                 </div>
                             </div>
                         </li>
@@ -134,12 +146,12 @@ const Header = (props) => {
                                 allConfigData?.open_register === true
                                     ?
                                     <button onClick={handleClickPOSBtn}
-                                        className='px-sm-3 px-2 d-flex text-decoration-none pos-button pos-button-highlight'>
+                                        className='px-2 px-sm-3 d-flex text-decoration-none pos-button pos-button-highlight text-nowrap'>
                                         {getFormattedMessage('header.pos.title')}
                                     </button>
                                     :
                                     <Link to='/app/pos'
-                                        className='px-sm-3 px-2 d-flex text-decoration-none pos-button pos-button-highlight'>
+                                        className='px-2 px-sm-3 d-flex text-decoration-none pos-button pos-button-highlight text-nowrap'>
                                         {getFormattedMessage('header.pos.title')}
                                     </Link>
                                 :
@@ -147,16 +159,16 @@ const Header = (props) => {
                             }
                         </li>
                         {isFullscreen === true ?
-                            <li className="px-sm-3 px-2" onClick={() => fullScreen()}>
-                                <FontAwesomeIcon icon={faMinimize} className='text-primary fs-2' />
+                            <li className="px-1 px-sm-2" onClick={() => fullScreen()}>
+                                <FontAwesomeIcon icon={faMinimize} className='text-primary fs-4' />
                             </li>
                             :
-                            <li className="px-sm-3 px-2" onClick={() => fullScreen()}>
-                                <FontAwesomeIcon icon={faMaximize} className='text-primary fs-2' />
+                            <li className="px-1 px-sm-2" onClick={() => fullScreen()}>
+                                <FontAwesomeIcon icon={faMaximize} className='text-primary fs-4' />
                             </li>
                         }
                     </ul>
-                    <Dropdown className='d-flex align-items-stretch'>
+                    <Dropdown className='d-flex align-items-stretch ms-1'>
                         <Dropdown.Toggle className='hide-arrow bg-transparent border-0 p-0 d-flex align-items-center'
                             id='dropdown-basic'>
                             <div className='d-flex align-items-center justify-content-center'>
@@ -170,7 +182,7 @@ const Header = (props) => {
                                     </span>
                                 }
                                 <span
-                                    className='ms-2 text-gray-600 d-none d-sm-block'>
+                                    className='ms-2 text-gray-600 d-none d-sm-block text-truncate header-toolbar-user-name'>
                                     {updatedFirstName && updatedLastName ? <>{updatedFirstName + ' ' + updatedLastName}</> : <> {firstName + ' ' + lastName}</>}
                                 </span>
                             </div>

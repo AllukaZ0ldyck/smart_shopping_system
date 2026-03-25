@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Card, Badge } from "react-bootstrap-v5";
 import { connect, useDispatch } from "react-redux";
+import { useIntl } from "react-intl";
 import { posFetchProduct } from "../../../store/action/pos/posfetchProductAction";
 import { posAllProduct } from "../../../store/action/pos/posAllProductAction";
 import productImage from "../../../assets/images/brand_logo.png";
@@ -11,6 +12,24 @@ import {
 } from "../../../shared/sharedMethod";
 import { toastType } from "../../../constants";
 import Skelten from "../../../shared/components/loaders/Skelten";
+
+const getAvailableQuantity = (product) => {
+    const q = product?.attributes?.stock?.quantity;
+    if (q === undefined || q === null) {
+        return 0;
+    }
+    const n = parseFloat(q);
+    return Number.isFinite(n) ? n : 0;
+};
+
+const getStockAlertLevel = (product) => {
+    const a = product?.attributes?.stock_alert;
+    if (a === undefined || a === null || a === "null" || a === "") {
+        return 0;
+    }
+    const n = parseFloat(a);
+    return Number.isFinite(n) ? n : 0;
+};
 
 const Product = (props) => {
     const {
@@ -30,6 +49,7 @@ const Product = (props) => {
     const [updateProducts, setUpdateProducts] = useState([]);
     const clickAudioRef = useRef(null);
     const dispatch = useDispatch();
+    const intl = useIntl();
 
     useEffect(() => {
         // update cart while cart is updated
@@ -41,7 +61,8 @@ const Product = (props) => {
     }, [updateProducts, cartProducts]);
 
     const addToCart = (product) => {
-        if(product.attributes.stock.quantity > 0.0){
+        const available = getAvailableQuantity(product);
+        if (available > 0) {
             if (settings?.attributes?.enable_pos_click_audio === 'true' && clickAudioRef.current) {
                 clickAudioRef.current.play().catch((e) => {
                     console.warn("Audio play failed:", e);
@@ -51,9 +72,10 @@ const Product = (props) => {
         } else {
             dispatch(
                 addToast({
-                    text: getFormattedMessage(
-                        "pos.quantity.exceeds.quantity.available.in.stock.message"
-                    ),
+                    text: intl.formatMessage({
+                        id: "pos.this.product.out.of.stock.message",
+                        defaultMessage: "This product is out of stock",
+                    }),
                     type: toastType.ERROR,
                 })
             );
@@ -75,15 +97,18 @@ const Product = (props) => {
         const filterQty = updateProducts
             .filter((item) => item.id === product.id)
             .map((qty) => qty.quantity)[0];
+        const stockQty = getAvailableQuantity(product);
         if (
             updateProducts.filter((item) => item.id === product.id).length > 0
         ) {
-            if (filterQty >= product.attributes.stock.quantity) {
+            if (filterQty >= stockQty) {
                 dispatch(
                     addToast({
-                        text: getFormattedMessage(
-                            "pos.quantity.exceeds.quantity.available.in.stock.message"
-                        ),
+                        text: intl.formatMessage({
+                            id: "pos.quantity.exceeds.quantity.available.in.stock.message",
+                            defaultMessage:
+                                "Quantity exceeds quantity available in stock",
+                        }),
                         type: toastType.ERROR,
                     })
                 );
@@ -103,8 +128,7 @@ const Product = (props) => {
                             ? {
                                   ...item,
                                   quantity:
-                                      product.attributes.stock.quantity >
-                                      item.quantity
+                                      stockQty > item.quantity
                                           ? item.quantity++ + 1
                                           : null,
                               }
@@ -116,6 +140,19 @@ const Product = (props) => {
         } else {
             setUpdateProducts((prevSelected) => [...prevSelected, {...product,warehouse_id: selectedOption.value}]);
             updateCart((prevSelected) => [...prevSelected, {...newProduct,warehouse_id: selectedOption.value, image: product.attributes.images.imageUrls ? product.attributes.images.imageUrls[0] : productImage}]);
+            const alertLevel = getStockAlertLevel(product);
+            if (alertLevel > 0 && stockQty > 0 && stockQty <= alertLevel) {
+                dispatch(
+                    addToast({
+                        text: intl.formatMessage({
+                            id: "pos.product.low.stock.notification",
+                            defaultMessage:
+                                "This item is below its stock alert level. Restock soon.",
+                        }),
+                        type: toastType.WARNING,
+                    })
+                );
+            }
         }
     };
 
@@ -126,11 +163,14 @@ const Product = (props) => {
     const posFilterProduct = posAllProducts &&
         settings?.attributes?.show_pos_stock_product === 'true'
         ? posAllProducts :
-        posAllProducts.filter(
-            (product) => product.attributes.stock.quantity > 0.0
-        );
+        posAllProducts.filter((product) => getAvailableQuantity(product) > 0);
     //Cart Item Array
     const loadAllProduct = (product, index) => {
+
+        const availableQty = getAvailableQuantity(product);
+        const showOutOfStock =
+            settings?.attributes?.show_pos_stock_product === "true" &&
+            availableQty <= 0;
 
         return (
             <div
@@ -141,7 +181,7 @@ const Product = (props) => {
                 <Card
                     className={`position-relative h-100 ${
                         isProductExistInCart(product.id) ? "product-active" : ""
-                    }`}
+                    } ${showOutOfStock ? "opacity-75" : ""}`}
                 >
                     <Card.Img
                         variant="top"
@@ -166,15 +206,27 @@ const Product = (props) => {
                            {product.attributes?.variation_product?.variation_type_name}
                         </span> : ''}</div>
                         <p className="m-0 item-badges">
-                            <Badge
-                                bg="info"
-                                text="white"
-                                className="product-custom-card__card-badge"
-                            >
-                                {product.attributes.stock &&
-                                    product.attributes.stock.quantity}{" "}
-                                {product?.attributes?.sale_unit_name?.short_name}
-                            </Badge>
+                            {showOutOfStock ? (
+                                <Badge
+                                    bg="danger"
+                                    text="white"
+                                    className="product-custom-card__card-badge"
+                                >
+                                    {intl.formatMessage({
+                                        id: "pos.out.of.stock.badge.label",
+                                        defaultMessage: "Out of stock",
+                                    })}
+                                </Badge>
+                            ) : (
+                                <Badge
+                                    bg="info"
+                                    text="white"
+                                    className="product-custom-card__card-badge"
+                                >
+                                    {availableQty}{" "}
+                                    {product?.attributes?.sale_unit_name?.short_name}
+                                </Badge>
+                            )}
                         </p>
                         <p className="m-0 item-badge">
                             <Badge

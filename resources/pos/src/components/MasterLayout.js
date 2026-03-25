@@ -58,20 +58,24 @@ const MasterLayout = (props) => {
                 } d-flex flex-column flex-row-fluid`}
             >
                 <div className="d-flex align-items-stretch justify-content-between header">
-                    <div className="container-fluid d-flex align-items-stretch justify-content-xxl-between flex-grow-1">
+                    <div className="container-fluid master-layout-header-inner d-flex align-items-stretch flex-grow-1 flex-nowrap px-2 px-sm-3">
                         <button
                             type="button"
-                            className="btn d-flex align-items-center d-xl-none px-0"
+                            className="btn d-flex align-items-center d-xl-none px-0 flex-shrink-0 me-1"
                             title="Show aside menu"
                             onClick={menuClick}
                         >
                             <FontAwesomeIcon icon={faBars} className="fs-1" />
                         </button>
-                        <AsideTopSubMenuItem
-                            asideConfig={asideConfig}
-                            isMenuCollapse={isMenuCollapse}
-                        />
-                        <Header newRoutes={newRoutes} />
+                        <div className="master-layout-header-nav flex-grow-1">
+                            <AsideTopSubMenuItem
+                                asideConfig={asideConfig}
+                                isMenuCollapse={isMenuCollapse}
+                            />
+                        </div>
+                        <div className="master-layout-header-toolbar flex-shrink-0 ps-2">
+                            <Header newRoutes={newRoutes} />
+                        </div>
                     </div>
                 </div>
                 <div className="content d-flex flex-column flex-column-fluid pt-7">

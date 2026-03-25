@@ -582,6 +582,7 @@ export const toastType = {
     ADD_TOAST: "ADD_TOAST",
     REMOVE_TOAST: "REMOVE_TOAST",
     ERROR: "error",
+    WARNING: "warning",
 };
 
 export const Tokens = {

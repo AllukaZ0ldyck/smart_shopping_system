@@ -59,6 +59,11 @@ Notes:
 - Because it is one backend, both devices are automatically connected to the same MySQL database configured in MacBook `.env`.
 - If macOS firewall prompts for PHP access, allow incoming connections.
 
+### Further reading
+
+- [Network deployment (hosted vs LAN)](docs/DEPLOYMENT_NETWORK.md) — DNS, TLS, `0.0.0.0` bind, webhooks, firewall.
+- [Sales and inventory reports](docs/REPORTS_AND_INVENTORY.md) — UI locations, API routes, POS stock notifications.
+
 ---
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>

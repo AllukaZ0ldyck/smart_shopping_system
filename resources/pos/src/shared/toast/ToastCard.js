@@ -1,24 +1,43 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import {toastType} from '../../constants/index';
-import {faCheck, faClose, faXmark} from '@fortawesome/free-solid-svg-icons';
+import {faCheck, faClose, faExclamationTriangle, faXmark} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {placeholderText} from "../sharedMethod";
 
 const ToastCard = (props) => {
     const {type, text, closeToast} = props;
-    const iconColor = type === toastType.ERROR ? 'toast-card__icon--error' : 'toast-card__icon--success';
+    const iconColor =
+        type === toastType.ERROR
+            ? 'toast-card__icon--error'
+            : type === toastType.WARNING
+              ? 'toast-card__icon--warning'
+              : 'toast-card__icon--success';
+
+    const titleKey =
+        type === toastType.ERROR
+            ? 'toast.error.title'
+            : type === toastType.WARNING
+              ? 'toast.warning.title'
+              : 'toast.successful.title';
+
+    const icon =
+        type === toastType.ERROR
+            ? faXmark
+            : type === toastType.WARNING
+              ? faExclamationTriangle
+              : faCheck;
 
     const renderCard = () => {
         return (
             <div className='d-flex align-items-center'>
                 <div className={`${iconColor}`}>
-                    <FontAwesomeIcon icon={type === toastType.ERROR ? faXmark : faCheck}
+                    <FontAwesomeIcon icon={icon}
                                      className='fs-1'/>
                 </div>
                 <div className='mx-3'>
                     <h2 className='toast-card__toast-title'>
-                        {(`${type === toastType.ERROR ? placeholderText("toast.error.title") : placeholderText("toast.successful.title")}`)}
+                        {placeholderText(titleKey)}
                     </h2>
                     <p className='toast-card__toast-message'>{text}</p>
                 </div>

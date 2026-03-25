@@ -1,9 +1,61 @@
 @import "../components/variables";
 @import "../base/mixin/overlay";
 
+// Master layout: keep report tabs from overlapping clock / POS / user (horizontal scroll)
+.master-layout-header-inner {
+    min-width: 0;
+}
+
+.master-layout-header-nav {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba($gray-600, 0.35);
+        border-radius: 4px;
+    }
+
+    .navbar {
+        flex-wrap: nowrap !important;
+    }
+
+    .navbar-nav {
+        flex-wrap: nowrap !important;
+    }
+
+    .navbar-collapse {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+}
+
+.master-layout-header-toolbar {
+    min-width: fit-content;
+}
+
+.master-layout-toolbar-navbar {
+    min-width: 0;
+}
+
+.header-toolbar-user-name {
+    max-width: 7rem;
+
+    @media (min-width: 1200px) {
+        max-width: 9rem;
+    }
+}
+
 .header {
     background-color: $body-bg;
-    height: 70px;
+    min-height: 70px;
     padding: 0;
     box-shadow: 0 0 20px rgba(173, 181, 189, 0.1);
 

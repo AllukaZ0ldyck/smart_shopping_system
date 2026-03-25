@@ -112,7 +112,7 @@ const AsideTopSubMenuItem = (props) => {
 
             <nav
                 className={`navbar navbar-expand-xl ${isMenuCollapse === true ? "top-navbar" : "top-nav-heding"
-                    } navbar-light  ${(isMobileDropdownVisible) ? 'd-none d-lg-flex' : 'd-flex'} align-items-center gap-3  px-0 py-0  mx-3`}
+                    } navbar-light  ${(isMobileDropdownVisible) ? 'd-none d-lg-flex' : 'd-flex'} align-items-center gap-2 gap-xl-3 px-0 py-0 mx-0 mx-xl-2 flex-nowrap`}
             >
                 <div className="navbar-collapse">
                     {(config?.includes(Permissions.MANAGE_SALE) || config?.includes(Permissions.MANAGE_PURCHASE) || config?.includes(Permissions.MANAGE_CUSTOMERS) || config?.includes(Permissions.MANAGE_PRODUCTS) || config?.includes(Permissions.MANAGE_SUPPLIERS) || config?.includes(Permissions.MANAGE_EXPENSES)) ? <Dropdown className="d-flex align-items-stretch me-3 report_dropdown">
