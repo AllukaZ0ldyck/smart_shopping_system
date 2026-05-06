@@ -17,7 +17,7 @@ class SettingTableSeeder extends Seeder
     {
         Customer::Create([
             'name' => 'walk-in-customer',
-            'email' => 'customer@infypos.com',
+            'email' => 'walk-in@customer.local',
             'phone' => '123456789',
             'country' => 'india',
             'city' => 'mumbai',
@@ -28,7 +28,7 @@ class SettingTableSeeder extends Seeder
             'phone' => '123456789',
             'country' => 'india',
             'city' => 'mumbai',
-            'email' => 'warehouse1@infypos.com',
+            'email' => 'warehouse@warehouse.local',
             'zip_code' => '12345',
         ]);
 
@@ -37,18 +37,18 @@ class SettingTableSeeder extends Seeder
             'code' => 'INR',
             'symbol' => '₹',
         ]);
-        $logoUrl = ('images/infycare-logo.png');
+        $logoUrl = 'images/brand_logo.png';
 
         if (! keyExist('currency')) {
             Setting::create(['key' => 'currency', 'value' => '1']);
         }
 
         if (! keyExist('email')) {
-            Setting::create(['key' => 'email', 'value' => 'support@infypos.com']);
+            Setting::create(['key' => 'email', 'value' => 'support@example.com']);
         }
 
         if (! keyExist('company_name')) {
-            Setting::create(['key' => 'company_name', 'value' => 'infy-pos']);
+            Setting::create(['key' => 'company_name', 'value' => 'Smart Shopping System']);
         }
 
         if (! keyExist('phone')) {
@@ -56,12 +56,13 @@ class SettingTableSeeder extends Seeder
         }
 
         if (! keyExist('developed')) {
-            Setting::create(['key' => 'developed', 'value' => 'infyom']);
+            Setting::create(['key' => 'developed', 'value' => 'Smart Shopping System']);
         }
 
         if (! keyExist('footer')) {
             Setting::create([
-                'key' => 'footer', 'value' => 'Developed by InfyOm All rights reserved',
+                'key' => 'footer',
+                'value' => 'All rights reserved',
             ]);
         }
 

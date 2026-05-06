@@ -45,6 +45,7 @@ import CreatePurchaseReturn from "./components/purchaseReturn/CreatePurchaseRetu
 import EditPurchaseReturn from "./components/purchaseReturn/EditPurchaseReturn";
 import PurchaseReturnDetails from "./components/purchaseReturn/PurchaseReturnDetails";
 import WarehouseReport from "./components/report/warehouseReport/WarehouseReport";
+import SalesInventoryStockReport from "./components/report/salesInventory/SalesInventoryStockReport";
 import SaleReport from "./components/report/saleReport/SaleReport";
 import StockReport from "./components/report/stockReport/StockReport";
 import StockDetails from "./components/report/stockReport/StockDetails";
@@ -436,6 +437,11 @@ export const route = [
     {
         path: "report/report-warehouse",
         ele: <WarehouseReport />,
+        permission: Permissions.MANAGE_REPORTS,
+    },
+    {
+        path: "report/sales-inventory-stock",
+        ele: <SalesInventoryStockReport />,
         permission: Permissions.MANAGE_REPORTS,
     },
     {

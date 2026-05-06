@@ -359,6 +359,7 @@ export default [
         permission: Permissions.MANAGE_REPORTS,
         subTitles: [
             { title: "warehouse.reports.title" },
+            { title: "report.sales-inventory.menu" },
             { title: "sale.reports.title" },
             { title: "stock.reports.title" },
             { title: "purchase.reports.title" },
@@ -376,6 +377,10 @@ export default [
             {
                 title: getFormattedMessage("warehouse.reports.title"),
                 to: "/app/report/report-warehouse",
+            },
+            {
+                title: getFormattedMessage("report.sales-inventory.menu"),
+                to: "/app/report/sales-inventory-stock",
             },
             {
                 title: getFormattedMessage("sale.reports.title"),

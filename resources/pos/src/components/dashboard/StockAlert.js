@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Card, Row, Table } from 'react-bootstrap';
+import { Alert, Card, Row, Table } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { getFormattedMessage } from '../../shared/sharedMethod';
 import { fetchStockAlert } from "../../store/action/stockAlertAction";
@@ -15,6 +15,11 @@ const StockAlert = ( props ) => {
         <div className='pt-6'>
             <Row className='g-4'>
                 <div className='col-12'>
+                    {stockAlertDetails && stockAlertDetails.length > 0 ? (
+                        <Alert variant="warning" className="mb-3">
+                            {getFormattedMessage("dashboard.stockAlert.banner")}
+                        </Alert>
+                    ) : null}
                     <Card>
                         <Card.Header className='pb-0 px-10'>
                             <h5 className="mb-0">{getFormattedMessage( "dashboard.stockAlert.title" )}</h5>

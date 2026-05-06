@@ -25,6 +25,7 @@ use App\Http\Controllers\API\QuotationAPIController;
 use App\Http\Controllers\API\ReportAPIController;
 use App\Http\Controllers\API\RoleAPIController;
 use App\Http\Controllers\API\SaleAPIController;
+use App\Http\Controllers\API\SalesInventoryReportAPIController;
 use App\Http\Controllers\API\SaleReturnAPIController;
 use App\Http\Controllers\API\SalesPaymentAPIController;
 use App\Http\Controllers\API\SettingAPIController;
@@ -306,6 +307,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // warehouse report
     Route::get('warehouse-report', [WarehouseAPIController::class, 'warehouseReport'])->name('report-warehouse');
+    Route::get('sales-inventory-report', [SalesInventoryReportAPIController::class, 'index']);
+    Route::get('sales-inventory-report-excel', [SalesInventoryReportAPIController::class, 'excel']);
+    Route::get('sales-inventory-report-pdf', [SalesInventoryReportAPIController::class, 'pdf']);
     Route::get(
         'sales-report-excel',
         [ReportAPIController::class, 'getWarehouseSaleReportExcel']

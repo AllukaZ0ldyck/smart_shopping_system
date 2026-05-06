@@ -62,6 +62,6 @@ class Setting extends Model implements HasMedia
             return $media->getFullUrl();
         }
 
-        return asset('images/infyom.png');
+        return asset('images/brand_logo.png');
     }
 }

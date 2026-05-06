@@ -293,6 +293,9 @@ class ReportAPIController extends AppBaseController
 
         foreach ($manageStocks as $stock) {
             $product = Product::where('id', $stock->product_id)->first();
+            if (! $product) {
+                continue;
+            }
             $productUnitName = BaseUnit::whereId($product->product_unit)->value('name');
             $stock['product_unit_name'] = $productUnitName;
             $product->stock = $stock;

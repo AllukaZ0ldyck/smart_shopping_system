@@ -136,14 +136,33 @@ function App() {
         }
     }, [language, languageData, updateLanguage?.lang_json_array]);
 
-    // updated language hendling
+    // updated language hendling — merge DB/custom strings over file locales so new keys in JSON still resolve
     useEffect(() => {
-        if (Object.values(userEditedMessage).length !== 0) {
-            setMessages(userEditedMessage);
+        const langKey = updatedLanguage || selectedLanguage || "en";
+        const baseLocale =
+            allLocales[langKey] || allLocales["en"] || {};
+
+        if (
+            userEditedMessage &&
+            typeof userEditedMessage === "object" &&
+            !Array.isArray(userEditedMessage) &&
+            Object.keys(userEditedMessage).length > 0
+        ) {
+            setMessages({ ...baseLocale, ...userEditedMessage });
         } else {
             if (updateLanguage?.iso_code === updatedLanguage) {
                 const updateLanguages = updateLanguage?.lang_json_array;
-                setMessages(updateLanguages);
+                if (
+                    updateLanguages &&
+                    typeof updateLanguages === "object" &&
+                    Object.keys(updateLanguages).length > 0
+                ) {
+                    setMessages({ ...baseLocale, ...updateLanguages });
+                } else {
+                    setMessages(
+                        Object.keys(baseLocale).length ? baseLocale : allLocales["en"] || {}
+                    );
+                }
             } else {
                 if (
                     updateLanguag === undefined ||
@@ -151,18 +170,24 @@ function App() {
                     updateLanguag === ""
                 ) {
                     const defaultUpdateLanguage = allLocales["en"];
-                    setMessages(defaultUpdateLanguage);
+                    setMessages(defaultUpdateLanguage || {});
                 } else {
                     if (updateLanguag === undefined || updateLanguag === null) {
                         const defaultUpdateLanguage = allLocales["en"];
-                        setMessages(defaultUpdateLanguage);
+                        setMessages(defaultUpdateLanguage || {});
                     } else {
                         setMessages(updateLanguag);
                     }
                 }
             }
         }
-    }, [userEditedMessage, allLocales, updateLanguage?.lang_json_array]);
+    }, [
+        userEditedMessage,
+        allLocales,
+        updateLanguage?.lang_json_array,
+        updatedLanguage,
+        selectedLanguage,
+    ]);
 
     useEffect(() => {
         selectCSS();

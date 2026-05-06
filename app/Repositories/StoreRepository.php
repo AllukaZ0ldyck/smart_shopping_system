@@ -196,7 +196,7 @@ class StoreRepository extends BaseRepository
             $customer = Customer::create([
                 'tenant_id' => $tenantId,
                 'name' => 'walk-in-customer',
-                'email' => 'customer@infypos.com',
+                'email' => 'walk-in@customer.local',
                 'phone' => '123456789',
                 'country' => 'india',
                 'city' => 'mumbai',
@@ -209,7 +209,7 @@ class StoreRepository extends BaseRepository
                 'phone' => '123456789',
                 'country' => 'india',
                 'city' => 'mumbai',
-                'email' => 'warehouse1@infypos.com',
+                'email' => 'warehouse@warehouse.local',
                 'zip_code' => '12345',
             ]);
 
@@ -242,15 +242,15 @@ class StoreRepository extends BaseRepository
 
             $settings = [
                 'currency' => $defaultSettings['currency'] ?? Currency::first()->id,
-                'email' => $defaultSettings['email'] ?? 'info@infypos.com',
-                // 'company_name' => $defaultSettings['company_name'] ?? 'InfyPos',
+                'email' => $defaultSettings['email'] ?? 'support@example.com',
+                // 'company_name' => $defaultSettings['company_name'] ?? 'Smart Shopping System',
                 'phone' => $defaultSettings['phone'] ?? '123456789',
-                'developed' => $defaultSettings['developed'] ?? 'InfyPos.com',
-                'footer' => $defaultSettings['footer'] ?? 'InfyPos.com',
+                'developed' => $defaultSettings['developed'] ?? 'Smart Shopping System',
+                'footer' => $defaultSettings['footer'] ?? 'All rights reserved',
                 'default_language' => $defaultSettings['default_language'] ?? 'en',
                 'default_customer' => $customer->id,
                 'default_warehouse' => $warehouse->id,
-                'address' => $defaultSettings['address'] ?? 'InfyPos',
+                'address' => $defaultSettings['address'] ?? 'Smart Shopping System',
                 'show_version_on_footer' => $defaultSettings['show_version_on_footer'] ?? '1',
                 'country' => $defaultSettings['country'] ?? 'India',
                 'state' => $defaultSettings['state'] ?? 'Gujarat',
