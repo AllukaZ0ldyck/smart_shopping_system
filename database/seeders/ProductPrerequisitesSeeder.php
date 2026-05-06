@@ -4,9 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\BaseUnit;
 use App\Models\Brand;
+use App\Models\MultiTenant;
 use App\Models\ProductCategory;
 use App\Models\Unit;
+use App\Models\User;
 use App\Models\Warehouse;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +17,16 @@ class ProductPrerequisitesSeeder extends Seeder
 {
     public function run(): void
     {
+        $tenantId = $this->resolveTenantId();
+
+        if ($this->command) {
+            $this->command->info(
+                $tenantId
+                    ? "Product prerequisites (tenant_id set for API/POS visibility)."
+                    : 'Product prerequisites (tenant_id null until StoreSeeder assigns a store/tenant).'
+            );
+        }
+
         $baseUnits = [
             'Piece',
             'Pack',
@@ -34,6 +47,7 @@ class ProductPrerequisitesSeeder extends Seeder
             if ($index === 0 && empty($baseUnit->is_default)) {
                 $baseUnit->update(['is_default' => true]);
             }
+            $this->attachTenant($baseUnit, $tenantId);
             $baseUnitIds[$name] = $baseUnit->id;
         }
 
@@ -49,13 +63,14 @@ class ProductPrerequisitesSeeder extends Seeder
         ];
 
         foreach ($units as $unit) {
-            Unit::query()->firstOrCreate(
+            $unitModel = Unit::query()->firstOrCreate(
                 ['name' => $unit['name']],
                 [
                     'short_name' => $unit['short_name'],
                     'base_unit' => $baseUnitIds[$unit['base_unit']],
                 ]
             );
+            $this->attachTenant($unitModel, $tenantId);
         }
 
         foreach ([
@@ -65,7 +80,8 @@ class ProductPrerequisitesSeeder extends Seeder
             'Personal Care',
             'Household Essentials',
         ] as $categoryName) {
-            ProductCategory::query()->firstOrCreate(['name' => $categoryName]);
+            $category = ProductCategory::query()->firstOrCreate(['name' => $categoryName]);
+            $this->attachTenant($category, $tenantId);
         }
 
         $brands = [
@@ -81,10 +97,11 @@ class ProductPrerequisitesSeeder extends Seeder
             'Silver Swan',
         ];
         foreach ($brands as $brandName) {
-            Brand::query()->firstOrCreate(
+            $brand = Brand::query()->firstOrCreate(
                 ['name' => $brandName],
                 ['description' => $brandName . ' demo brand']
             );
+            $this->attachTenant($brand, $tenantId);
         }
 
         $suppliers = [
@@ -117,11 +134,13 @@ class ProductPrerequisitesSeeder extends Seeder
         foreach ($suppliers as $supplier) {
             DB::table('suppliers')->updateOrInsert(
                 ['email' => $supplier['email']],
-                array_merge($supplier, ['updated_at' => now(), 'created_at' => now()])
+                array_merge($supplier, array_filter([
+                    'tenant_id' => $tenantId,
+                ]), ['updated_at' => now(), 'created_at' => now()])
             );
         }
 
-        Warehouse::query()->firstOrCreate(
+        $warehouse = Warehouse::query()->firstOrCreate(
             ['name' => 'warehouse'],
             [
                 'phone' => '123456789',
@@ -131,8 +150,9 @@ class ProductPrerequisitesSeeder extends Seeder
                 'zip_code' => '1100',
             ]
         );
+        $this->attachTenant($warehouse, $tenantId);
 
-        Warehouse::query()->firstOrCreate(
+        $mainWarehouse = Warehouse::query()->firstOrCreate(
             ['name' => 'Main Warehouse'],
             [
                 'phone' => '09170000000',
@@ -142,10 +162,14 @@ class ProductPrerequisitesSeeder extends Seeder
                 'zip_code' => '4301',
             ]
         );
+        $this->attachTenant($mainWarehouse, $tenantId);
 
         DB::table('variations')->updateOrInsert(
             ['name' => 'Size'],
-            ['updated_at' => now(), 'created_at' => now()]
+            array_merge(
+                array_filter(['tenant_id' => $tenantId]),
+                ['updated_at' => now(), 'created_at' => now()]
+            )
         );
         $variationId = DB::table('variations')->where('name', 'Size')->value('id');
         if (! empty($variationId)) {
@@ -155,6 +179,26 @@ class ProductPrerequisitesSeeder extends Seeder
                     ['updated_at' => now(), 'created_at' => now()]
                 );
             }
+        }
+    }
+
+    /**
+     * When running from the CLI there is no auth user; Multitenantable hides rows where
+     * tenant_id is null once you log into the POS/API. Prefer the tenant used by seeded users/stores.
+     */
+    private function resolveTenantId(): ?string
+    {
+        return User::withoutGlobalScopes()
+            ->whereNotNull('tenant_id')
+            ->orderBy('id')
+            ->value('tenant_id')
+            ?? MultiTenant::query()->orderBy('id')->value('id');
+    }
+
+    private function attachTenant(Model $model, ?string $tenantId): void
+    {
+        if ($tenantId !== null && (string) ($model->getAttribute('tenant_id') ?? '') !== (string) $tenantId) {
+            $model->update(['tenant_id' => $tenantId]);
         }
     }
 }

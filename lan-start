@@ -75,7 +75,25 @@ echo "Dashboard (MacBook): http://$IP:$PORT"
 echo "POS (iPad/Tablet):   http://$IP:$PORT"
 echo
 echo "Make sure all devices are on the same Wi-Fi/LAN."
+
+if command -v lsof >/dev/null 2>&1; then
+    existing_pid=""
+    existing_pid="$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)"
+    if [[ -n "$existing_pid" ]]; then
+        echo >&2
+        echo "WARN  Port $PORT is already in use (another Laravel process or duplicate ./lan-start?)." >&2
+        echo "      If PHP is already listening here, keep using http://$IP:$PORT — do not start a second server." >&2
+        echo "      Otherwise free the port, then rerun:" >&2
+        echo "        lsof -nP -iTCP:$PORT -sTCP:LISTEN" >&2
+        echo "        kill \$(lsof -tiTCP:$PORT -sTCP:LISTEN)" >&2
+        echo "      Or use another port: ./lan-start $((PORT + 1))" >&2
+        echo >&2
+        exit 1
+    fi
+fi
+
 echo "Running Laravel server on 0.0.0.0:$PORT ..."
+echo "(Set APP_URL in .env to http://$IP:$PORT so export/download links match this LAN address.)"
 echo
 
 php artisan serve --host=0.0.0.0 --port="$PORT"

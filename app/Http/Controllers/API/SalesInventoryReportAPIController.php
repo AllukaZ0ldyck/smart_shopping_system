@@ -15,6 +15,24 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class SalesInventoryReportAPIController extends AppBaseController
 {
+    /**
+     * Path under the web root (public/uploads). Returned in JSON so each browser uses
+     * window.location.origin + path — fixes LAN/iPad when .env APP_URL points at localhost
+     * or another host than the address the device used to open the app.
+     */
+    private function mediaDownloadPath(string $relativePath): string
+    {
+        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+
+        return '/uploads/'.$relativePath;
+    }
+
+    /** Disk storing exports (see config/filesystems.php → public uploads). */
+    private function mediaDisk(): string
+    {
+        return config('app.media_disc');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $period = (string) $request->get('period', 'daily');
@@ -75,18 +93,19 @@ class SalesInventoryReportAPIController extends AppBaseController
         ];
 
         $path = 'excel/sales-inventory-report.xlsx';
-        if (Storage::exists($path)) {
-            Storage::delete($path);
+        $disk = $this->mediaDisk();
+        if (Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
         }
 
         Excel::store(
             new SalesInventoryReportMultiSheetExport($salesLines, $inventory, $meta),
             $path,
-            config('app.media_disc')
+            $disk
         );
 
         return $this->sendResponse([
-            'sales_inventory_excel_url' => Storage::url($path),
+            'sales_inventory_excel_url' => $this->mediaDownloadPath($path),
         ], 'Sales and inventory Excel generated successfully.');
     }
 
@@ -119,8 +138,9 @@ class SalesInventoryReportAPIController extends AppBaseController
         ];
 
         $path = 'pdf/sales-inventory-report.pdf';
-        if (Storage::exists($path)) {
-            Storage::delete($path);
+        $disk = $this->mediaDisk();
+        if (Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
         }
 
         $pdf = CPDF::loadView('pdf.sales-inventory-report', [
@@ -129,10 +149,10 @@ class SalesInventoryReportAPIController extends AppBaseController
             'meta' => $meta,
         ])->setPaper('a4', 'landscape');
 
-        Storage::disk(config('app.media_disc'))->put($path, $pdf->output());
+        Storage::disk($disk)->put($path, $pdf->output());
 
         return $this->sendResponse([
-            'sales_inventory_pdf_url' => Storage::url($path),
+            'sales_inventory_pdf_url' => $this->mediaDownloadPath($path),
         ], 'Sales and inventory PDF generated successfully.');
     }
 

@@ -35,6 +35,27 @@ const buildQuery = (params) => {
     return q.toString();
 };
 
+/** Same-origin file URL for this device (LAN/iPad safe; fixes wrong host in API absolute URLs). */
+const resolveExportDownloadUrl = (raw) => {
+    if (!raw) {
+        return "";
+    }
+    const t = String(raw).trim();
+    if (!/^https?:\/\//i.test(t)) {
+        const path = t.startsWith("/") ? t : `/${t}`;
+        return `${window.location.origin}${path}`;
+    }
+    try {
+        const parsed = new URL(t);
+        if (parsed.pathname.startsWith("/uploads/")) {
+            return `${window.location.origin}${parsed.pathname}${parsed.search}`;
+        }
+    } catch {
+        /* ignore */
+    }
+    return t;
+};
+
 const SalesInventoryStockReport = (props) => {
     const intl = useIntl();
     const { warehouses, fetchAllWarehouses, frontSetting, allConfigData } =
@@ -121,12 +142,26 @@ const SalesInventoryStockReport = (props) => {
             anchor_date: anchorDate,
             warehouse_id: warehouseIdParam,
         });
-        const res = await apiConfig.get(
-            `${apiBaseURL.SALES_INVENTORY_REPORT_EXCEL}?${qs}`
-        );
-        const url = res.data?.data?.sales_inventory_excel_url;
-        if (url) {
-            window.open(url, "_blank");
+        // Open synchronously on click so the tab is not blocked after `await` (popup policy).
+        const tab = window.open("about:blank", "_blank");
+        try {
+            const res = await apiConfig.get(
+                `${apiBaseURL.SALES_INVENTORY_REPORT_EXCEL}?${qs}`
+            );
+            const url = resolveExportDownloadUrl(
+                res.data?.data?.sales_inventory_excel_url
+            );
+            if (url && tab) {
+                tab.location.href = url;
+            } else if (tab) {
+                tab.close();
+            } else if (url) {
+                window.location.assign(url);
+            }
+        } catch {
+            if (tab) {
+                tab.close();
+            }
         }
     };
 
@@ -136,12 +171,25 @@ const SalesInventoryStockReport = (props) => {
             anchor_date: anchorDate,
             warehouse_id: warehouseIdParam,
         });
-        const res = await apiConfig.get(
-            `${apiBaseURL.SALES_INVENTORY_REPORT_PDF}?${qs}`
-        );
-        const url = res.data?.data?.sales_inventory_pdf_url;
-        if (url) {
-            window.open(url, "_blank");
+        const tab = window.open("about:blank", "_blank");
+        try {
+            const res = await apiConfig.get(
+                `${apiBaseURL.SALES_INVENTORY_REPORT_PDF}?${qs}`
+            );
+            const url = resolveExportDownloadUrl(
+                res.data?.data?.sales_inventory_pdf_url
+            );
+            if (url && tab) {
+                tab.location.href = url;
+            } else if (tab) {
+                tab.close();
+            } else if (url) {
+                window.location.assign(url);
+            }
+        } catch {
+            if (tab) {
+                tab.close();
+            }
         }
     };
 
